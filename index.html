@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Новости регионов РФ — мобильный дашборд</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+:root,[data-theme="light"]{--bg:#f7f6f2;--s:#f9f8f5;--s2:#fbfbf9;--so:#f3f0ec;--bd:#d4d1ca;--tx:#28251d;--mut:#7a7974;--faint:#bab9b4;--pri:#01696f;--ok:#437a22;--err:#a12c7b;--warn:#964219;--org:#da7101;--gold:#d19900;--blue:#006494;--not:#a13544;--r:12px}
+[data-theme="dark"]{--bg:#171614;--s:#1c1b19;--s2:#201f1d;--so:#1d1c1a;--bd:#393836;--tx:#cdccca;--mut:#797876;--faint:#5a5957;--pri:#4f98a3;--ok:#6daa45;--err:#d163a7;--warn:#bb653b;--org:#fdab43;--gold:#e8af34;--blue:#5591c7;--not:#dd6974}
+*{box-sizing:border-box;margin:0;padding:0} html,body{height:100%} body{font-family:Inter,sans-serif;background:var(--bg);color:var(--tx)} button,input{font:inherit}
+.header{position:sticky;top:0;z-index:40;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;background:rgba(28,27,25,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--bd)}
+.title{font-size:1rem;font-weight:700}.sub{font-size:11px;color:var(--mut)}.toggle{width:40px;height:40px;border:1px solid var(--bd);border-radius:10px;background:var(--s);color:var(--tx)}
+.app{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 65px)}
+.side{background:var(--s);border-right:1px solid var(--bd);display:flex;flex-direction:column;min-width:0}.main{display:flex;flex-direction:column;min-width:0}
+.panel{padding:12px;border-bottom:1px solid var(--bd)} .search{width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--so);color:var(--tx);min-height:44px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}.chip{min-height:36px;padding:7px 10px;border:1px solid var(--bd);border-radius:999px;background:none;color:var(--mut);cursor:pointer;font-size:12px}.chip.active{color:var(--pri);border-color:var(--pri)}
+.region-list{overflow:auto;flex:1;padding:8px}.fo{padding:8px 10px 4px;font-size:11px;color:var(--faint);text-transform:uppercase}.item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer;min-height:44px}.item:hover,.item.active{background:var(--so)}
+.kpis{display:grid;grid-template-columns:repeat(4, minmax(120px,1fr));gap:8px;padding:10px 12px;border-bottom:1px solid var(--bd);overflow:auto}.kpi{background:var(--s);border:1px solid var(--bd);border-radius:12px;padding:10px}.kpi .l{font-size:11px;text-transform:uppercase;color:var(--mut)}.kpi .v{font-size:22px;font-weight:700;margin-top:4px;line-height:1.1}
+.status{padding:8px 12px;font-size:12px;color:var(--mut);border-bottom:1px solid var(--bd)} .map-wrap{position:relative;background:var(--so);min-height:280px;flex:1} #svg{width:100%;height:100%}.tt{position:absolute;opacity:0;pointer-events:none;background:var(--s);border:1px solid var(--bd);padding:8px 10px;border-radius:10px;font-size:12px;max-width:220px}
+.detail{height:280px;background:var(--s);border-top:1px solid var(--bd);display:flex;flex-direction:column}.detail-head{padding:10px 12px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;gap:8px;align-items:center}.feed{overflow:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px}.news{padding:10px;border-radius:12px;border:1px solid var(--bd);background:var(--s2)}.meta{font-size:12px;color:var(--mut);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+.bottom-nav{display:none}
+@media (max-width: 900px){.app{grid-template-columns:1fr}.side{display:none}.kpis{grid-template-columns:repeat(2,minmax(120px,1fr))}.map-wrap{height:44vh;min-height:240px}.detail{height:38vh;min-height:260px}.bottom-nav{display:grid;grid-template-columns:repeat(3,1fr);position:sticky;bottom:0;background:rgba(28,27,25,.96);backdrop-filter:blur(12px);border-top:1px solid var(--bd);z-index:50}.nav-btn{min-height:54px;border:none;background:none;color:var(--mut)}.nav-btn.active{color:var(--pri)}}
+@media (max-width: 520px){.header{padding:10px 12px}.title{font-size:.95rem}.kpis{grid-template-columns:repeat(2,1fr)}.kpi .v{font-size:18px}.chip{font-size:11px;padding:6px 9px}.map-wrap{height:40vh}.detail{height:34vh}.tt{display:none}}
+.view{display:flex;flex-direction:column;min-height:0;flex:1}.hidden-mobile{display:block}@media (max-width:900px){.hidden-mobile{display:none}.mobile-sheet{display:none;position:fixed;inset:66px 0 54px 0;background:var(--bg);z-index:45;overflow:auto}.mobile-sheet.active{display:block}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div>
+    <div class="title">Новости регионов РФ</div>
+    <div class="sub">HTML версия · адаптивный дашборд</div>
+  </div>
+  <button class="toggle" id="themeBtn" aria-label="Переключить тему">◐</button>
+</header>
+<div class="app">
+  <aside class="side">
+    <div class="panel">
+      <div class="chips" id="chipsSide"></div>
+      <input id="searchSide" class="search" placeholder="Поиск региона" />
+    </div>
+    <div class="region-list" id="regionListSide"></div>
+  </aside>
+  <main class="main">
+    <div class="kpis">
+      <div class="kpi"><div class="l">Новостей</div><div class="v" id="k1">0</div></div>
+      <div class="kpi"><div class="l">Активных регионов</div><div class="v" id="k2">0</div></div>
+      <div class="kpi"><div class="l">ЧП</div><div class="v" id="k3">0</div></div>
+      <div class="kpi"><div class="l">Топ регион</div><div class="v" id="k4" style="font-size:15px">—</div></div>
+    </div>
+    <div class="status" id="status">Загрузка данных...</div>
+    <div class="view" id="view-map">
+      <div class="map-wrap"><svg id="svg"></svg><div class="tt" id="tt"></div></div>
+      <section class="detail"><div class="detail-head"><strong id="dt">Выберите регион</strong><span id="dc" class="sub"></span></div><div class="feed" id="feed"></div></section>
+    </div>
+  </main>
+</div>
+<div class="mobile-sheet" id="sheet-filters"><div class="panel"><div class="chips" id="chipsMobile"></div><input id="searchMobile" class="search" placeholder="Поиск региона" /></div><div class="region-list" id="regionListMobile"></div></div>
+<nav class="bottom-nav">
+  <button class="nav-btn active" data-view="map">Карта</button>
+  <button class="nav-btn" data-view="filters">Регионы</button>
+  <button class="nav-btn" data-view="detail">Лента</button>
+</nav>
+<script>
+const FD={
+'ЦФО':['Москва','Московская область','Воронежская область','Белгородская область','Брянская область','Владимирская область','Ивановская область','Калужская область','Костромская область','Курская область','Липецкая область','Орловская область','Рязанская область','Смоленская область','Тамбовская область','Тверская область','Тульская область','Ярославская область'],
+'СЗФО':['Санкт-Петербург','Ленинградская область','Архангельская область','Вологодская область','Калининградская область','Мурманская область','Новгородская область','Псковская область','Республика Карелия','Республика Коми','Ненецкий АО'],
+'ЮФО':['Краснодарский край','Ростовская область','Волгоградская область','Республика Крым','Севастополь','Астраханская область','Республика Адыгея','Республика Калмыкия'],
+'СКФО':['Ставропольский край','Республика Дагестан','Республика Ингушетия','Республика Северная Осетия','Кабардино-Балкарская Республика','Карачаево-Черкесская Республика','Чеченская Республика'],
+'ПФО':['Нижегородская область','Республика Татарстан','Самарская область','Башкортостан','Пермский край','Оренбургская область','Республика Мордовия','Республика Марий Эл','Чувашская Республика','Кировская область','Пензенская область','Саратовская область','Ульяновская область','Удмуртская Республика'],
+'УФО':['Свердловская область','Тюменская область','Челябинская область','Курганская область','Ханты-Мансийский АО','Ямало-Ненецкий АО'],
+'СФО':['Красноярский край','Новосибирская область','Иркутская область','Кемеровская область','Алтайский край','Омская область','Томская область','Республика Бурятия','Республика Алтай','Республика Тыва','Республика Хакасия','Забайкальский край'],
+'ДФО':['Приморский край','Хабаровский край','Республика Саха (Якутия)','Камчатский край','Сахалинская область','Амурская область','Магаданская область','Еврейская АО','Чукотский АО']};
+const SOURCES={federal:[{name:'Lenta Russia',url:'https://lenta.ru/rss/news/russia'},{name:'Lenta Last24',url:'https://lenta.ru/rss/last24'},{name:'Российская газета',url:'https://rg.ru/xml/index.xml'},{name:'MK Новости',url:'https://www.mk.ru/rss/index.xml'},{name:'RT',url:'https://russian.rt.com/rss/'},{name:'Mail',url:'https://news.mail.ru/rss/'}],regional:[{name:'74.ru',url:'https://74.ru/rss/text/news/',region_hint:'Челябинская область'},{name:'59.ru',url:'https://59.ru/rss/text/news/',region_hint:'Пермский край'},{name:'63.ru',url:'https://63.ru/rss/text/news/',region_hint:'Самарская область'},{name:'NN.ru',url:'https://www.nn.ru/rss/text/news/',region_hint:'Нижегородская область'},{name:'E1.ru',url:'https://www.e1.ru/rss/text/news/',region_hint:'Свердловская область'},{name:'PrimaMedia',url:'http://primamedia.ru/export/news.xml',region_hint:'Приморский край'}]};
+const CATS=['all','politics','economy','emergency','social','army','culture','sport'];
+const CAT_LABEL={all:'Все',politics:'Политика',economy:'Экономика',emergency:'ЧП',social:'Социальное',army:'СВО',culture:'Культура',sport:'Спорт'};
+const CAT_COLOR={politics:'var(--blue)',economy:'var(--gold)',emergency:'var(--not)',social:'var(--ok)',army:'var(--warn)',culture:'#a86fdf',sport:'var(--org)',other:'var(--mut)'};
+const ALIASES={'москва':'Москва','московской области':'Московская область','подмосковье':'Московская область','санкт-петербург':'Санкт-Петербург','петербург':'Санкт-Петербург','челябинск':'Челябинская область','челябинской области':'Челябинская область','екатеринбург':'Свердловская область','свердловской области':'Свердловская область','краснодарского края':'Краснодарский край','краснодар':'Краснодарский край','ростовской области':'Ростовская область','ростов-на-дону':'Ростовская область','дагестан':'Республика Дагестан','иркутской области':'Иркутская область','новосибирской области':'Новосибирская область','красноярского края':'Красноярский край','приморского края':'Приморский край','татарстан':'Республика Татарстан','башкортостан':'Башкортостан','белгородской области':'Белгородская область','курской области':'Курская область','брянской области':'Брянская область','воронежской области':'Воронежская область','крыма':'Республика Крым','севастополя':'Севастополь','пермского края':'Пермский край','самарской области':'Самарская область','нижегородской области':'Нижегородская область'};
+const PROXIES=[u=>'https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(u),u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),u=>'https://corsproxy.io/?'+encodeURIComponent(u)];
+const DEMO=[['Новый мост через реку сдан в эксплуатацию досрочно','economy','Регион.ру'],['Паводок угрожает нескольким сёлам: введён режим ЧС','emergency','ТАСС'],['Губернатор встретился с главой федерального ведомства','politics','РИА Новости'],['Открылся новый корпус областной больницы','social','Регион.ру'],['Волонтёры отправили гуманитарный конвой в зону СВО','army','РИА Новости'],['Фестиваль народного творчества собрал тысячи зрителей','culture','Культура.рф'],['Местная команда вышла в финал регионального чемпионата','sport','Спорт-регион']];
+let regions=[],activeCat='all',activeRegion=null,query=''; const cache=new Map();
+function themeToggle(){const r=document.documentElement; r.setAttribute('data-theme', r.getAttribute('data-theme')==='dark'?'light':'dark'); draw();}
+document.getElementById('themeBtn').onclick=themeToggle;
+function classify(t){t=t.toLowerCase(); if(/пожар|дтп|авар|взрыв|павод|подтоп|шторм|чс|обруш/.test(t)) return 'emergency'; if(/сво|обстрел|бпла|дрон|военн|минобороны|фронт/.test(t)) return 'army'; if(/завод|инвест|производств|бюджет|эконом|строительств|предприят/.test(t)) return 'economy'; if(/губернатор|мэр|депутат|правительств|закон|власти|совет/.test(t)) return 'politics'; if(/школ|больниц|поликлиник|жиль|дорог|жкх|социал|выплат|детсад/.test(t)) return 'social'; if(/фестиваль|музей|театр|выставк|концерт|культур/.test(t)) return 'culture'; if(/спорт|матч|турнир|чемпионат|кубок/.test(t)) return 'sport'; return 'other';}
+function detectRegion(text,hint){const t=text.toLowerCase(); for(const [k,v] of Object.entries(ALIASES)) if(t.includes(k)) return v; return hint||null;}
+function regionFO(name){for(const [fo,arr] of Object.entries(FD)) if(arr.includes(name)) return fo; return 'Прочее';}
+function hoursAgo(d){const mins=Math.max(1,Math.round((Date.now()-d.getTime())/60000)); if(mins<60) return mins+' мин назад'; return Math.round(mins/60)+' ч назад';}
+function parseXml(xmlText){const xml=new DOMParser().parseFromString(xmlText,'text/xml'); return Array.from(xml.querySelectorAll('item,entry')).map(n=>({title:n.querySelector('title')?.textContent||'', description:n.querySelector('description,summary,content')?.textContent||'', link:n.querySelector('link')?.getAttribute?.('href')||n.querySelector('link')?.textContent||'#', pubDate:n.querySelector('pubDate,published,updated')?.textContent||''}));}
+async function fetchFeed(src){if(cache.has(src.url) && Date.now()-cache.get(src.url).ts<10*60*1000) return cache.get(src.url).data; for(const p of PROXIES){try{const res=await fetch(p(src.url),{cache:'no-store'}); if(!res.ok) continue; let data; if(p(src.url).includes('rss2json')) data=await res.json(); else data={items:parseXml(await res.text())}; if((data.items||[]).length){cache.set(src.url,{ts:Date.now(),data}); return data;}}catch(e){}} return {items:[]};}
+function buildDemo(){const out=[]; for(const [fo,names] of Object.entries(FD)){ for(const name of names){ const seed=name.charCodeAt(0); const count=Math.max(2,(seed%8)+1); const news=Array.from({length:Math.min(5,count)},(_,i)=>{const [t,c,s]=DEMO[(seed+i)%DEMO.length]; return {title:t,cat:c,src:s,time:(i+1)+' ч назад',date:new Date(Date.now()-(i+1)*3600*1000),link:'#'};}); out.push({name,fo,count,news}); }} return out;}
+async function loadLive(){const status=document.getElementById('status'); status.textContent='Подключение к RSS...'; const srcs=[...SOURCES.federal,...SOURCES.regional]; const results=await Promise.all(srcs.map(async s=>({src:s,data:await fetchFeed(s)}))); const items=[]; const cutoff=Date.now()-24*3600*1000; for(const r of results){ for(const it of (r.data.items||[])){ const title=it.title||''; const desc=(it.description||'').replace(/<[^>]+>/g,' '); const date=new Date(it.pubDate||it.published||it.updated||Date.now()); if(isNaN(date.getTime())||date.getTime()<cutoff) continue; const region=detectRegion(title+' '+desc,r.src.region_hint); if(!region) continue; items.push({region,title,link:it.link||'#',date,cat:classify(title+' '+desc),src:r.src.name}); }} if(!items.length){regions=buildDemo(); status.textContent='Живые источники недоступны, показаны демо-данные.'; refreshUI(); return;} const seen=new Map(); items.forEach(x=>seen.set((x.link||'')+'|'+x.title.toLowerCase(),x)); const agg=new Map(); for(const x of seen.values()){ if(!agg.has(x.region)) agg.set(x.region,{name:x.region,fo:regionFO(x.region),count:0,news:[]}); const r=agg.get(x.region); r.count++; r.news.push({title:x.title,cat:x.cat,src:x.src,time:hoursAgo(x.date),date:x.date,link:x.link}); } regions=Array.from(agg.values()).map(r=>{r.news.sort((a,b)=>b.date-a.date); r.news=r.news.slice(0,30); return r;}); const known=new Set(regions.map(r=>r.name)); Object.entries(FD).forEach(([fo,names])=>names.forEach(name=>{if(!known.has(name)) regions.push({name,fo,count:0,news:[]});})); status.textContent='Живые RSS данные · источников: '+srcs.length; refreshUI();}
+function filteredCount(r){return activeCat==='all'?r.count:r.news.filter(n=>n.cat===activeCat).length}
+function refreshUI(){const vis=regions.map(r=>({...r,vc:filteredCount(r)})); document.getElementById('k1').textContent=vis.reduce((a,b)=>a+b.vc,0); document.getElementById('k2').textContent=vis.filter(x=>x.vc>0).length; document.getElementById('k3').textContent=vis.reduce((a,b)=>a+b.news.filter(n=>n.cat==='emergency').length,0); const top=[...vis].sort((a,b)=>b.vc-a.vc)[0]; document.getElementById('k4').textContent=top?.name||'—'; renderChips(); renderLists(); draw(); if(activeRegion) renderDetail(activeRegion);} 
+function renderChips(){const build=target=>{const el=document.getElementById(target); el.innerHTML=''; CATS.forEach(cat=>{const b=document.createElement('button'); b.className='chip'+(activeCat===cat?' active':''); b.textContent=CAT_LABEL[cat]; b.dataset.cat=cat; b.onclick=()=>{activeCat=cat; refreshUI();}; el.appendChild(b);});}; build('chipsSide'); build('chipsMobile');}
+function renderLists(){const render=id=>{const el=document.getElementById(id); el.innerHTML=''; const g={}; for(const r of regions){ if(query && !r.name.toLowerCase().includes(query)) continue; if(!g[r.fo]) g[r.fo]=[]; g[r.fo].push(r);} for(const [fo,arr] of Object.entries(g)){ const h=document.createElement('div'); h.className='fo'; h.textContent=fo; el.appendChild(h); arr.sort((a,b)=>filteredCount(b)-filteredCount(a)).forEach(r=>{ const d=document.createElement('div'); d.className='item'+(activeRegion===r.name?' active':''); d.innerHTML=`<span>${r.name}</span><strong>${filteredCount(r)}</strong>`; d.onclick=()=>{activeRegion=r.name; renderLists(); renderDetail(r.name); draw(); showMobile('map');}; el.appendChild(d);}); }}; render('regionListSide'); render('regionListMobile');}
+function renderDetail(name){const r=regions.find(x=>x.name===name); document.getElementById('dt').textContent=name; const items=activeCat==='all'?r.news:r.news.filter(n=>n.cat===activeCat); document.getElementById('dc').textContent=items.length+' новостей'; const feed=document.getElementById('feed'); feed.innerHTML=''; if(!items.length){feed.innerHTML='<div class="news">Нет новостей по фильтру</div>'; return;} items.forEach(n=>{const d=document.createElement('div'); d.className='news'; d.innerHTML=`<div style="font-weight:600"><a href="${n.link}" target="_blank" rel="noopener noreferrer">${n.title}</a></div><div class="meta"><span style="color:${CAT_COLOR[n.cat]||'var(--mut)'}">${CAT_LABEL[n.cat]||n.cat}</span><span>${n.src}</span><span>${n.time}</span></div>`; feed.appendChild(d);});}
+function color(c){if(c===0)return 'var(--so)'; if(c<3)return 'color-mix(in oklch, var(--pri) 35%, var(--so))'; if(c<7)return 'color-mix(in oklch, var(--org) 45%, var(--so))'; return 'color-mix(in oklch, var(--not) 55%, var(--so))';}
+function draw(){const svg=document.getElementById('svg'); svg.innerHTML=''; const W=svg.clientWidth||900,H=svg.clientHeight||420; svg.setAttribute('viewBox',`0 0 ${W} ${H}`); const s=d3.select(svg), g=s.append('g'), tt=document.getElementById('tt'); const blocks=[{fo:'ЦФО',x:.06,y:.32,w:.12,h:.18},{fo:'СЗФО',x:.04,y:.08,w:.10,h:.22},{fo:'ЮФО',x:.10,y:.52,w:.10,h:.16},{fo:'СКФО',x:.10,y:.68,w:.08,h:.14},{fo:'ПФО',x:.20,y:.28,w:.11,h:.30},{fo:'УФО',x:.33,y:.15,w:.09,h:.28},{fo:'СФО',x:.44,y:.14,w:.20,h:.34},{fo:'ДФО',x:.66,y:.05,w:.30,h:.70}]; blocks.forEach(b=>{const arr=regions.filter(r=>r.fo===b.fo); const cols=Math.ceil(Math.sqrt(Math.max(arr.length,1))),rows=Math.ceil(arr.length/cols),bw=b.w*W,bh=b.h*H,bx=b.x*W,by=b.y*H,cw=bw/cols,ch=bh/rows; g.append('text').attr('x',bx+bw/2).attr('y',by-4).attr('text-anchor','middle').attr('font-size',10).attr('fill','var(--faint)').text(b.fo); arr.forEach((r,i)=>{const col=i%cols,row=Math.floor(i/cols),x=bx+col*cw+2,y=by+row*ch+2,w=cw-4,h=ch-4; g.append('rect').attr('x',x).attr('y',y).attr('width',w).attr('height',h).attr('rx',4).attr('fill',color(filteredCount(r))).attr('stroke',activeRegion===r.name?'var(--pri)':'var(--bd)').attr('stroke-width',activeRegion===r.name?2:1).style('cursor','pointer').on('mouseenter',(e)=>{tt.style.opacity=1;tt.innerHTML='<strong>'+r.name+'</strong><br>'+filteredCount(r)+' новостей';}).on('mousemove',(e)=>{const box=svg.getBoundingClientRect();tt.style.left=(e.clientX-box.left+10)+'px';tt.style.top=(e.clientY-box.top+10)+'px';}).on('mouseleave',()=>tt.style.opacity=0).on('click',()=>{activeRegion=r.name; renderLists(); renderDetail(r.name); draw();});});});}
+function bindSearch(id){document.getElementById(id).addEventListener('input',e=>{query=e.target.value.toLowerCase(); document.getElementById('searchSide').value=query; document.getElementById('searchMobile').value=query; renderLists();});}
+bindSearch('searchSide'); bindSearch('searchMobile');
+function showMobile(view){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===view)); const sheet=document.getElementById('sheet-filters'); const map=document.getElementById('view-map'); if(window.innerWidth>900){sheet.classList.remove('active'); return;} if(view==='filters'){sheet.classList.add('active'); map.classList.add('hidden-mobile');} else if(view==='detail'){sheet.classList.remove('active'); map.classList.remove('hidden-mobile'); document.querySelector('.detail').scrollIntoView({behavior:'smooth',block:'start'});} else {sheet.classList.remove('active'); map.classList.remove('hidden-mobile');}}
+document.querySelectorAll('.nav-btn').forEach(b=>b.onclick=()=>showMobile(b.dataset.view));
+loadLive(); setInterval(()=>{if(document.visibilityState==='visible') loadLive();},15*60*1000); window.addEventListener('resize',draw);
+</script>
+</body>
+</html>
